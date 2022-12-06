@@ -2,12 +2,12 @@ package exports_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/go-chi/chi/v5"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -33,6 +33,12 @@ func CreateExportRequest(name, format, sources string) *http.Request {
 	return request
 }
 
+func createMockApplicationsNotifier() exports.NotifyApplicationOfExportJob {
+	return func(ctx context.Context, identity string, payload models.ExportPayload) error {
+		return nil
+	}
+}
+
 var _ = Context("Set up export handler", func() {
 	cfg := config.ExportCfg
 	cfg.Debug = true
@@ -42,11 +48,11 @@ var _ = Context("Set up export handler", func() {
 
 	BeforeEach(func() {
 		exportHandler = &exports.Export{
-			Bucket:    cfg.StorageConfig.Bucket,
-			Client:    es3.Client,
-			DB:        &models.ExportDB{DB: testGormDB},
-			KafkaChan: make(chan *kafka.Message),
-			Log:       logger.Log,
+			Bucket:                cfg.StorageConfig.Bucket,
+			Client:                es3.Client,
+			DB:                    &models.ExportDB{DB: testGormDB},
+			NotifyAppsOfExportJob: createMockApplicationsNotifier(),
+			Log:                   logger.Log,
 		}
 
 		router = chi.NewRouter()

@@ -188,12 +188,17 @@ func main() {
 	log.Infof("created kafka producer: %s", producer.String())
 	go producer.StartProducer(kafkaProducerMessagesChan)
 
+	applicationsNotifier, err := exports.KafkaBasedApplicationNotifier(kafkaProducerMessagesChan, log)
+	if err != nil {
+		log.Panic("failed to create application notifier", "error", err)
+	}
+
 	external := exports.Export{
-		Bucket:    cfg.StorageConfig.Bucket,
-		Client:    client,
-		DB:        &models.ExportDB{DB: db.DB},
-		KafkaChan: kafkaProducerMessagesChan,
-		Log:       log,
+		Bucket:                cfg.StorageConfig.Bucket,
+		Client:                client,
+		DB:                    &models.ExportDB{DB: db.DB},
+		NotifyAppsOfExportJob: applicationsNotifier,
+		Log:                   log,
 	}
 	wsrv := createPublicServer(external)
 
